@@ -280,3 +280,57 @@ dst = cv.GaussianBlur(src, (3, 3), 0)
 cv.imshow("Gaussian Blur", dst)
 ```
 
+## 5.3 边缘保留滤波(EPF)
+
+```python
+
+def bi_demo(image):
+    # 高斯双边
+    # bilateralFilter(src, d, sigmaColor, sigmaSpace, dst=None, borderType=None):
+    dst = cv.bilateralFilter(image, 0, 100, 15)
+    # d=0时候，由sigmaSpace推导
+    # dst = dst[::2,::2,:]
+    cv.imshow("bi_demo", dst)
+
+
+def shift_demo(image):
+    # pyrMeanShiftFiltering(src, sp, sr, dst=None, maxLevel=None, termcrit=None)
+    # 均值迁移
+    dst = cv.pyrMeanShiftFiltering(image, 10, 50)
+    cv.imshow("shift_demo", dst)
+    
+src = cv.imread("images/lqq.jpeg")
+cv.namedWindow("input image", cv.WINDOW_AUTOSIZE)
+cv.imshow("input image", src)
+# bi_demo(src)
+shift_demo(src)
+```
+
+# 6.图像直方图
+
+抓住图像的特征像素分布
+
+```python
+
+def plot_demo(image):
+    plt.figure()
+    plt.hist(image.ravel(), 256, [0, 256])
+    plt.show()
+
+
+def image_hist(image):
+    color = ('blue', 'green', 'red')
+    for i, color in enumerate(color):
+        print(i,color)
+        hist = cv.calcHist([image], [i], None, [256], [0, 256])
+        plt.plot(hist, color=color)
+        plt.xlim([0, 256])
+    plt.show()
+src = cv.imread("images/cxy.jpeg")
+cv.namedWindow("input image", cv.WINDOW_AUTOSIZE)
+cv.imshow("input image", src)
+plot_demo(src)
+# print()
+image_hist(src)
+```
+
