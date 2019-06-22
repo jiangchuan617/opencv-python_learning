@@ -452,3 +452,161 @@ def template_demo():
 
 ```
 
+# 8.二值化
+
+## 8.1 图像二值化
+
+二值图像阈值可以参考直方图；
+
+图像二值化的方法：
+
+- OTUS
+- Triangle
+- 自动和手动
+
+```python
+
+def threshold_demo(image):
+    gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+    ret, binary = cv.threshold(gray, 127, 255, cv.THRESH_BINARY|cv.THRESH_OTSU)
+    # cv.THRESH_OTSU起作用，127就不起作用了
+    print("threshold value %s"%ret)
+    cv.imshow("binary", binary)
+
+
+def local_threshold(image):
+    gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+    binary = cv.adaptiveThreshold(gray, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, 		  cv.THRESH_BINARY, 25, 10)
+    cv.imshow("binary", binary)
+
+
+def custom_threshold(image):
+    gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+    h, w = gray.shape[:2]
+    m = np.reshape(gray, [1, w*h])
+    mean = m.sum() / (w*h)
+    print("mean : ", mean)
+    ret, binary = cv.threshold(gray, mean, 255, cv.THRESH_BINARY)
+    cv.imshow("binary", binary)
+    
+    
+src = cv.imread("images/lena.png")
+cv.namedWindow("input image", cv.WINDOW_AUTOSIZE)
+cv.imshow("input image", src)
+
+threshold_demo(src)
+local_threshold(src)
+custom_threshold(src)
+```
+
+## 8.2超大图像二值化
+
+```python
+
+
+def big_image_binary(image):
+    print(image.shape)
+    cw = 256
+    ch = 256
+    h, w = image.shape[:2]
+    gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+    for row in range(0, h, ch):
+        for col in range(0, w, cw):
+            roi = gray[row:row+ch, col:cw+col]
+            print(np.std(roi), np.mean(roi))
+            dst = cv.adaptiveThreshold(roi,255,cv.ADAPTIVE_THRESH_GAUSSIAN_C,cv.THRESH_BINARY,127,20)
+            """空白图像过滤
+            dev = np.std(roi)
+            if dev < 15:
+                gray[row:row + ch, col:cw + col] = 255
+            else:
+                ret, dst = cv.threshold(roi, 0, 255, cv.THRESH_BINARY | cv.THRESH_OTSU)
+                gray[row:row + ch, col:cw + col] = dst
+            """
+            gray[row:row + ch, col:cw + col] = dst
+    cv.imwrite("D:/vcprojects/result_binary.png", gray)
+
+src = cv.imread("images/red_text2.png")
+big_image_binary(src)
+```
+
+# 9.图像金字塔
+
+## 9.1 高斯金字塔
+
+```python
+
+def pyramid_demo(image):
+    level = 3
+    temp = image.copy()
+    pyramid_images = []
+    for i in range(level):
+        dst = cv.pyrDown(temp)
+        pyramid_images.append(dst)
+        cv.imshow("pyramid_down_"+str(i), dst)
+        temp = dst.copy()
+    return pyramid_images
+
+```
+
+
+
+## 9.2 拉普拉斯金字塔
+
+```pytHon
+def lapalian_demo(image):
+    pyramid_images = pyramid_demo(image)
+    level = len(pyramid_images)
+    for i in range(level-1, -1, -1):
+        if (i-1) < 0 :
+            expand = cv.pyrUp(pyramid_images[i], dstsize=image.shape[:2])
+            lpls = cv.subtract(image, expand)
+            cv.imshow("lapalian_down_" + str(i), lpls)
+        else:
+            expand = cv.pyrUp(pyramid_images[i], dstsize=pyramid_images[i-1].shape[:2])
+            lpls = cv.subtract(pyramid_images[i-1], expand)
+            cv.imshow("lapalian_down_"+str(i), lpls)
+            
+src = cv.imread("images/lena.png") # 图片必须是512*512的
+cv.namedWindow("input image", cv.WINDOW_AUTOSIZE)
+cv.imshow("input image", src)
+lapalian_demo(src)
+```
+
+# 10.图像梯度
+
+## 10.1一阶导数和Sobel算子
+
+```python
+
+def sobel_demo(image):
+    # cv.Scharr是Sobel算子的增强版本
+    grad_x = cv.Scharr(image, cv.CV_32F, 1, 0)
+    grad_y = cv.Scharr(image, cv.CV_32F, 0, 1)
+    gradx = cv.convertScaleAbs(grad_x)
+    grady = cv.convertScaleAbs(grad_y)
+    cv.imshow("gradient-x", gradx)
+    cv.imshow("gradient-y", grady)
+    # 梯度加权
+    gradxy = cv.addWeighted(gradx, 0.5, grady, 0.5, 0)
+    cv.imshow("gradient", gradxy)
+```
+
+
+
+## 10.2 二阶导数与拉普拉斯算子
+
+```python
+
+def lapalian_demo(image):
+    dst = cv.Laplacian(image, cv.CV_32F)
+    lpls = cv.convertScaleAbs(dst)
+    # 自己定义拉普拉斯算子
+    # kernel = np.array([[1, 1, 1], [1, -8, 1], [1, 1, 1]])
+    # dst = cv.filter2D(image, cv.CV_32F, kernel=kernel)
+    # lpls = cv.convertScaleAbs(dst)
+    cv.imshow("lapalian_demo", lpls)
+```
+
+
+
