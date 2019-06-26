@@ -610,3 +610,356 @@ def lapalian_demo(image):
 
 
 
+# 11.边缘提取
+
+## 11.1Canny算法
+
+### 步骤：
+
+1. 高斯模糊
+2. 灰度转换
+3. 计算梯度
+4. 非最大信号抑制
+5. 高低阈值输出二值图像
+
+```python
+def edge_demo(image):
+    blurred = cv.GaussianBlur(image, (3, 3), 0)
+    gray = cv.cvtColor(blurred, cv.COLOR_BGR2GRAY)
+    # X Gradient
+    xgrad = cv.Sobel(gray, cv.CV_16SC1, 1, 0)
+    # Y Gradient
+    ygrad = cv.Sobel(gray, cv.CV_16SC1, 0, 1)
+    #edge
+    # edge_output = cv.Canny(xgrad, ygrad, 50, 150) # 可以用梯度，也可以传blurred,gray
+    edge_output = cv.Canny(gray, 50, 150)
+    cv.imshow("Canny Edge", edge_output)
+
+    dst = cv.bitwise_and(image, image, mask=edge_output)
+    cv.imshow("Color Edge", dst)
+```
+
+## 11.2直线检测
+
+### 霍夫直线变换
+
+```python
+
+def line_detection(image):
+    gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+    edges = cv.Canny(gray, 50, 150, apertureSize=3)
+    lines = cv.HoughLines(edges, 1, np.pi/180, 200)
+    for line in lines:
+        print(type(lines))
+        rho, theta = line[0]
+        a = np.cos(theta)
+        b = np.sin(theta)
+        x0 = a * rho
+        y0 = b * rho
+        x1 = int(x0+1000*(-b))
+        y1 = int(y0+1000*(a))
+        x2 = int(x0-1000*(-b))
+        y2 = int(y0-1000*(a))
+        cv.line(image, (x1, y1), (x2, y2), (0, 0, 255), 2)
+    cv.imshow("image-lines", image)
+
+
+def line_detect_possible_demo(image):
+    gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+    edges = cv.Canny(gray, 50, 150, apertureSize=3)
+    lines = cv.HoughLinesP(edges, 1, np.pi/180, 100, minLineLength=50, maxLineGap=10)
+    for line in lines:
+        print(type(line))
+        x1, y1, x2, y2 = line[0]
+        cv.line(image, (x1, y1), (x2, y2), (0, 0, 255), 2)
+    cv.imshow("line_detect_possible_demo", image)
+
+```
+
+## 11.3圆检测
+
+```python
+
+def detect_circles_demo(image):
+    # 中值滤波
+    dst = cv.pyrMeanShiftFiltering(image, 200, 400)
+    cimage = cv.cvtColor(dst, cv.COLOR_BGR2GRAY)
+    circles = cv.HoughCircles(cimage, cv.HOUGH_GRADIENT, 1, 20, param1=50, param2=30, minRadius=0, maxRadius=0)
+    circles = np.uint16(np.around(circles))
+    for i in circles[0, :]:
+        cv.circle(image, (i[0], i[1]), i[2], (0, 0, 255), 2)
+        cv.circle(image, (i[0], i[1]), 2, (255, 0, 0), 2)
+    cv.imshow("circles", image)
+```
+
+## 11.4 轮廓发现
+
+```python
+
+
+def edge_demo(image):
+    blurred = cv.GaussianBlur(image, (3, 3), 0)
+    gray = cv.cvtColor(blurred, cv.COLOR_BGR2GRAY)
+    # X Gradient
+    xgrad = cv.Sobel(gray, cv.CV_16SC1, 1, 0)
+    # Y Gradient
+    ygrad = cv.Sobel(gray, cv.CV_16SC1, 0, 1)
+    #edge
+    #edge_output = cv.Canny(xgrad, ygrad, 50, 150)
+    edge_output = cv.Canny(gray, 30, 100)
+    cv.imshow("Canny Edge", edge_output)
+    return edge_output
+
+
+def contours_demo(image):
+    """dst = cv.GaussianBlur(image, (3, 3), 0)
+    gray = cv.cvtColor(dst, cv.COLOR_BGR2GRAY)
+    ret, binary = cv.threshold(gray, 0, 255, cv.THRESH_BINARY | cv.THRESH_OTSU)
+    cv.imshow("binary image", binary)"""
+    binary = edge_demo(image)
+    print(binary.shape)
+		# 格式错误的时候需要怎么处理 binary = np.array(binary, np.uint8)
+    cloneImage, contours, heriachy = cv.findContours(binary, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+    for i, contour in enumerate(contours):
+        cv.drawContours(image, contours, i, (0, 0, 255), 2)
+        approxCurve = cv.approxPolyDP(contour, 4, True)
+        if approxCurve.shape[0] > 6:
+            cv.drawContours(image, contours, i, (0, 255, 255), 2)
+        if approxCurve.shape[0] == 4:
+            cv.drawContours(image, contours, i, (255, 255, 0), 2)
+        print(approxCurve.shape[0])
+        print(i)
+    cv.imshow("detect contours", image)
+```
+
+# 12.对象测量
+
+```python
+
+def measure_object(image):
+    gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+    ret, binary = cv.threshold(gray, 0, 255, cv.THRESH_BINARY | cv.THRESH_OTSU)
+    print("threshold value : %s"%ret)
+    cv.imshow("binary image", binary)
+    dst = cv.cvtColor(binary, cv.COLOR_GRAY2BGR)
+    outImage, contours, hireachy = cv.findContours(binary, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+    for i, contour in enumerate(contours):
+        area = cv.contourArea(contour)
+        x, y, w, h = cv.boundingRect(contour)
+        rate = min(w, h)/max(w, h)
+        print("rectangle rate : %s"%rate)
+        mm = cv.moments(contour)
+        print(type(mm))
+        cx = mm['m10']/mm['m00']
+        cy = mm['m01']/mm['m00']
+        cv.circle(dst, (np.int(cx), np.int(cy)), 3, (0, 255, 255), -1)
+        #cv.rectangle(dst, (x, y), (x+w, y+h), (0, 0, 255), 2)
+        print("contour area %s"%area)
+        approxCurve = cv.approxPolyDP(contour,4, True)
+        print(approxCurve.shape)
+        if approxCurve.shape[0] > 6:
+            cv.drawContours(dst, contours, i, (0, 255, 0), 2)
+        if approxCurve.shape[0] == 4:
+            cv.drawContours(dst, contours, i, (0, 0, 255), 2)
+        if approxCurve.shape[0] == 3:
+            cv.drawContours(dst, contours, i, (255, 0, 0), 2)
+    cv.imshow("measure-contours", dst)
+
+
+```
+
+# 13.图像形态学
+
+## 13.1 膨胀
+
+3x3的结构元素模板，支持任意形状的结构元素
+
+### 膨胀的作用
+
+- 对象大小增加一个像素(3x3)
+
+- 平滑对象边缘
+
+-  减少或者填充对象之间的距离
+
+```python
+
+def dilate_demo(image):
+    print(image.shape)
+    gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+    ret, binary = cv.threshold(gray, 0, 255, cv.THRESH_BINARY | cv.THRESH_OTSU)
+    cv.imshow("binary", binary)
+    # 得到结构元素,一般选择MORPH_RECT
+    kernel = cv.getStructuringElement(cv.MORPH_RECT, (5, 5))
+    dst = cv.dilate(binary, kernel)
+    cv.imshow("dilate_demo", dst)
+```
+
+
+
+## 13.2 腐蚀
+
+### 腐蚀的作用
+
+- 对象大小减少1个像素(3x3)
+
+- 平滑对象边缘
+
+- 弱化或者分割图像之间的半岛型连接
+
+```python
+
+def erode_demo(image):
+    print(image.shape)
+    gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+    ret, binary = cv.threshold(gray, 0, 255, cv.THRESH_BINARY | cv.THRESH_OTSU)
+    cv.imshow("binary", binary)
+    # 得到结构元素
+    kernel = cv.getStructuringElement(cv.MORPH_RECT, (15, 15))
+    dst = cv.erode(binary, kernel)
+    cv.imshow("erode_demo", dst)
+
+```
+
+### 注意 膨胀和腐蚀都可以在彩色图上操作
+
+```python
+src = cv.imread("images/lena.png")
+cv.namedWindow("input image", cv.WINDOW_AUTOSIZE)
+cv.imshow("input image", src)
+# erode_demo(src)
+# dilate_demo(src)
+kernel = cv.getStructuringElement(cv.MORPH_RECT, (3, 3))
+dst = cv.erode(src, kernel)
+```
+
+## 13.3 开闭操作
+
+开操作=腐蚀+膨胀 —>去除小的干扰块儿
+
+闭操作=膨胀+腐蚀 —>填充闭合区域
+
+```python
+
+def open_demo(image):
+    print(image.shape)
+    gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+    ret, binary = cv.threshold(gray, 0, 255, cv.THRESH_BINARY_INV | cv.THRESH_OTSU)
+    cv.imshow("binary", binary)
+    kernel = cv.getStructuringElement(cv.MORPH_RECT, (15, 15))  # (15,1)提取水平线,(1,15)提取竖直线
+    kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (15, 15))  # cv.MORPH_ELLIPSE 保留圆
+    binary = cv.morphologyEx(binary, cv.MORPH_OPEN, kernel)
+    cv.imshow("open-result", binary)
+
+
+def close_demo(image):
+    print(image.shape)
+    gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+    ret, binary = cv.threshold(gray, 0, 255, cv.THRESH_BINARY | cv.THRESH_OTSU)
+    cv.imshow("binary", binary)
+    kernel = cv.getStructuringElement(cv.MORPH_RECT, (15, 15))
+    binary = cv.morphologyEx(binary, cv.MORPH_CLOSE, kernel)
+    cv.imshow("close_demo", binary)
+
+```
+
+ ## 13.4 顶帽(tophat)与黑帽(blackhat)
+
+顶帽：原图像与开操作之间的 差值图像
+
+黑帽：原图像与闭操作之间的插值图像
+
+```python
+def top_hat_demo(image):
+    gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+    kernel = cv.getStructuringElement(cv.MORPH_RECT, (15, 15))
+    dst = cv.morphologyEx(gray, cv.MORPH_TOPHAT, kernel)
+    cimage = np.array(gray.shape, np.uint8)
+    cimage = 120
+    dst = cv.add(dst, cimage)
+    cv.imshow("tophat", dst)
+def black_hat_demo(image):
+    gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+    kernel = cv.getStructuringElement(cv.MORPH_RECT, (15, 15))
+    dst = cv.morphologyEx(gray, cv.MORPH_BLACKHAT, kernel)
+    cimage = np.array(gray.shape, np.uint8)
+    cimage = 120
+    dst = cv.add(dst, cimage)
+    cv.imshow("blackhat", dst)
+
+
+```
+
+
+
+## 13.5形态学梯度
+
+### 基本梯度
+
+膨胀后的图像减去腐蚀后的图像得到的差值图像
+
+### 内部梯度
+
+原图减去腐蚀后的图像得到的差值图像
+
+### 外部梯度
+
+图像膨胀后的图像减去原图得到的差值图像
+
+```python 
+
+def gradient2_demo(image):
+    kernel = cv.getStructuringElement(cv.MORPH_RECT, (3, 3))
+    dm = cv.dilate(image, kernel)
+    em = cv.erode(image, kernel)
+    dst1 = cv.subtract(image, em) # internal gradient
+    dst2 = cv.subtract(dm, image) # external gradient
+    cv.imshow("internal", dst1)
+    cv.imshow("external", dst2)
+
+```
+
+# 14.分水岭算法
+
+### 步骤
+
+输入图像—>灰度—>二值—>距离变换—>寻找种子—>生成marker—>分水岭变换—>输出图像
+
+```python
+
+def watershed_demo():
+    # remove noise if any
+    print(src.shape)
+    blurred = cv.pyrMeanShiftFiltering(src, 10, 100)
+    # gray\binary image
+    gray = cv.cvtColor(blurred, cv.COLOR_BGR2GRAY)
+    ret, binary = cv.threshold(gray, 0, 255, cv.THRESH_BINARY | cv.THRESH_OTSU)
+    cv.imshow("binary-image", binary)
+
+    # morphology operation
+    kernel = cv.getStructuringElement(cv.MORPH_RECT, (3, 3))
+    mb = cv.morphologyEx(binary, cv.MORPH_OPEN, kernel, iterations=2)
+    sure_bg = cv.dilate(mb, kernel, iterations=3)
+    cv.imshow("mor-opt", sure_bg)
+
+    # distance transform
+    dist = cv.distanceTransform(mb, cv.DIST_L2, 3)
+    dist_output = cv.normalize(dist, 0, 1.0, cv.NORM_MINMAX)
+    cv.imshow("distance-t", dist_output * 50)
+
+    ret, surface = cv.threshold(dist, dist.max() * 0.6, 255, cv.THRESH_BINARY)
+
+    surface_fg = np.uint8(surface)
+    cv.imshow("surface-bin", surface_fg)
+    unknown = cv.subtract(sure_bg, surface_fg)
+    ret, markers = cv.connectedComponents(surface_fg)
+
+    # watershed transform
+    markers = markers + 1
+    markers[unknown == 255] = 0
+    markers = cv.watershed(src, markers=markers)
+    src[markers == -1] = [0, 0, 255]
+    cv.imshow("result", src)
+
+```
+
