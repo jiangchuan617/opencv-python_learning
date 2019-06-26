@@ -963,3 +963,30 @@ def watershed_demo():
 
 ```
 
+# 15.人脸检测
+
+### 图像人脸检测
+
+```python
+def face_detect_demo(image):
+    gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+    face_detector = cv.CascadeClassifier("./images/haarcascade_frontalface_alt_tree.xml")
+    faces = face_detector.detectMultiScale(gray, 1.1, 2)
+    for x, y, w, h in faces:
+        cv.rectangle(image, (x, y), (x+w, y+h), (0, 0, 255), 2)
+    cv.imshow("result", image)
+```
+
+### 视频人脸检测
+
+```python
+capture = cv.VideoCapture(0)
+while(True):
+    ret, frame = capture.read()
+    frame = cv.flip(frame, 1)
+    face_detect_demo(frame)
+    c = cv.waitKey(10)
+    if c == 27: # ESC
+        break
+```
+
